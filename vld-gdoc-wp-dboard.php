@@ -9,6 +9,41 @@ Author URI: http://github.com/vldnik84
 */
 
 /**
+ * Gets data from GDoc and puts them into a cache file
+ */
+function vld_gdoc_wp_get_data() {
+
+	require_once __DIR__ . '/google-api-php-client-2.2.2/vendor/autoload.php';
+
+	$service = new Google_Service_Sheets( gdoc_auth() );
+
+	$sheet_id = json_decode( file_get_contents(__DIR__ . '/access-data/sheet_id.json') );
+	$sheet_range = 'B1:F12'; // full range is A1:F12
+
+	$result = $service->spreadsheets_values->get($sheet_id, $sheet_range)->getValues();
+	file_put_contents( __DIR__ . '/access-data/cache.json', json_encode($result) );
+}
+add_action( 'init', 'vld_gdoc_wp_get_data');
+
+/**
+ * Performs server to server authorization with a service account
+ */
+function gdoc_auth() {
+
+	$SERVICE_KEY = __DIR__ . '/access-data/service_key.json';
+	$SCOPES = array( Google_Service_Sheets::SPREADSHEETS_READONLY );
+
+	putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $SERVICE_KEY);
+
+	$client = new Google_Client();
+	$client->useApplicationDefaultCredentials();
+	$client->setIncludeGrantedScopes(true);
+	$client->addScope($SCOPES);
+
+	return $client;
+}
+
+/**
  * Creates a custom post type
  */
 function vld_cpt_function() {
@@ -38,7 +73,7 @@ function vld_cpt_function() {
 	);
 	register_post_type( 'product', $args );
 }
-add_action( 'init', 'vld_cpt_function' );
+add_action( 'init', 'vld_cpt_function');
 
 /**
  * Adds a widget to the dashboard
@@ -57,35 +92,6 @@ add_action( 'wp_dashboard_setup', 'vld_gdoc_wp_dboard_add_widget' );
  * Gets data from Google Doc Spreadsheet
  */
 function vld_gdoc_wp_dboard_function() {
-
-	require_once __DIR__ . '/google-api-php-client-2.2.2/vendor/autoload.php';
-
-	$service = new Google_Service_Sheets( google_sheet_auth() );
-
-	$sheet_id = file_get_contents(__DIR__ . '/access-data/sheet_id.txt');
-	$sheet_range = 'A1:F12';
-	//$sheet_range = 'A1:F12';
-
-	$result = $service->spreadsheets_values->get($sheet_id, $sheet_range)->getValues();
-	array_shift($result);
-	echo "<pre>";
-	print_r($result);
+	echo "TEST TEST TEST";
 }
 
-/**
- * Performs server to server authorization with a service account
- */
-function google_sheet_auth() {
-
-	$SERVICE_KEY = __DIR__ . '/access-data/service_key.json';
-	$SCOPES = array( Google_Service_Sheets::SPREADSHEETS_READONLY );
-
-	putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $SERVICE_KEY);
-
-	$client = new Google_Client();
-	$client->useApplicationDefaultCredentials();
-	$client->setIncludeGrantedScopes(true);
-	$client->addScope($SCOPES);
-
-	return $client;
-}
