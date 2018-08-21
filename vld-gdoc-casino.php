@@ -44,6 +44,16 @@ function vld_gdoc_casino_add_cpt() {
 		'has_archive'   => true
 	);
 	register_post_type( 'vld_gdoc_casino_cpt', $args );
+
+	$args = array(
+		'labels'        => array('name' => 'List of casinos'),
+		'description'   => 'A table with a list of casinos',
+		'public'        => true,
+		'menu_position' => 5,
+		'supports'      => array('title', 'comments'),
+		'has_archive'   => true
+	);
+	register_post_type( 'vld_gdoc_casino_tbl', $args );
 }
 add_action( 'init', 'vld_gdoc_casino_add_cpt');
 
@@ -125,16 +135,16 @@ function vld_gdoc_casino_function() {
 
 			curl_exec($curl);
 			curl_close($curl);
+
 			$post_args = array(
 				'post_type'    => 'vld_gdoc_casino_cpt',
 				'post_title'   => $post_title,
 				'post_status'  => $sort_res[$i]['display_status'] === 'y' ? 'publish' : 'private',
 				'post_content' => $sort_res[$i]['description'],
-				'menu_order'   => $i,
 				'meta_input'   => array(
 					'casino_link'  => $sort_res[$i]['casino_link'],
 					'casino_image' => $sort_res[$i]['casino_image'],
-					'sort_order'   => $sort_res[$i]['sort_order'] )
+					'sort_order'   => (int) $sort_res[$i]['sort_order'])
 			);
 			// TODO check if not 0 and not an object
 			$post_id = wp_insert_post($post_args);
@@ -164,7 +174,54 @@ function vld_gdoc_casino_function() {
 		}
 	}
 
-	echo "TEST TEST TEST";
+	$query = new WP_Query(array(
+		'post_type'   => 'vld_gdoc_casino_cpt',
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		//'nopaging'    => true,
+		'meta_key'    => 'sort_order',
+		'orderby'     => 'meta_value_num',
+		'order'       => 'ASC'
+	));
+
+	vld_gdoc_casino_table($query);
+	//wp_reset_query();
+}
+
+/**
+ *
+ */
+function vld_gdoc_casino_table( $query ) {
+
+	$out  = '<table>';
+	$out .= '<thead><tr><th>Casino name</th><th>Description</th></tr></thead>';
+	$out .= '<tbody>';
+
+	while ($query->have_posts()) {
+
+		$query->the_post();
+		$out .= '<tr><td>' . get_the_title() . '</td><td>' . get_the_content() . '</td>' . '</tr>';
+		//print_r(get_post_meta($query->post->ID));
+		wp_reset_postdata();
+	}
+
+	$out .= '</tbody>';
+	$out .= '</table>';
+
+	//wp_reset_query();
+
+	$post_title = 'List of casinos';
+	if (post_exists($post_title) === 0) {
+		$post_args = array(
+			'post_type'    => 'vld_gdoc_casino_tbl',
+			'post_title'   => $post_title,
+			'post_status'  => 'publish',
+			'post_content' => $out
+		);
+		wp_insert_post( $post_args );
+	}
+
+	echo $out;
 }
 
 /**
@@ -267,80 +324,16 @@ function vld_gdoc_casino_link_save( $post_id ) {
 }
 add_action( 'save_post', 'vld_gdoc_casino_link_save', 1, 2 );
 
+/**
+ * Adds custom posts to the front page
+ *
+ * @param $query
+ */
+function vld_gdoc_casino_fp_posts( $query ) {
 
-
-//function wpa18013_add_pages_to_dropdown( $pages, $r ){
-//	print_r($r);
-//die();
-//	if('page_on_front' == $r['name']) {
-//		$args = array(
-//			'post_type' => 'vld_gdoc_casino_cpt'
-//		);
-//		$stacks = get_posts($args);
-//		$pages = array_merge($pages, $stacks);
-//	}
-//
-//	return $pages;
-//}
-//add_filter( 'get_pages', 'wpa18013_add_pages_to_dropdown', 10, 2 );
-
-//add_action( 'pre_get_posts', 'wpse_242473_add_post_type_to_home' );
-//
-//function wpse_242473_add_post_type_to_home( $query ) {
-//
-//	if( $query->is_main_query() && $query->is_home() ) {
-//		$query->set( 'post_type', array( 'post', 'vld_gdoc_casino_cpt') );
-//	}
-//}
-
-
-//function wpse_242473_recent_posts( $atts = null, $content = null, $tag = null ) {
-//
-//	$out = '';
-//
-//	$args = array(
-//		'numberposts' => '6',
-//		'post_status' => 'publish',
-//		'post_type' => 'vld_gdoc_casino_cpt' ,
-//	);
-//
-//	$recent = wp_get_recent_posts( $args );
-//
-//	echo "recent";
-//	print_r($recent);
-//	die();
-//
-//	if ( $recent ) {
-//
-//		$out .= '<section class="overview">';
-//
-//		$out .= '<h1>Recent Projects</h1>';
-//
-//		$out .= '<div class="overview">';
-//
-//		foreach ( $recent as $item ) {
-//
-//			$out .= '<a href="' . get_permalink( $item['ID'] ) . '">';
-//			$out .= get_the_post_thumbnail( $item['ID'] );
-//			$out .= '</a>';
-//		}
-//
-//		$out .= '</div></section>';
-//	}
-//
-//	if ( $tag ) {
-//		return $out;
-//	} else {
-//		echo $out;
-//	}
-//
-//}
-//
-//add_shortcode( 'recentposts', 'wpse_242473_recent_posts' );
-
-
-function themeslug_filter_front_page_template( $template ) {
-	return "123";
-		//is_home() ? '' : $template;
+	if( $query->is_main_query() && $query->is_home() ) {
+		$query->set( 'post_type', array( 'post', 'vld_gdoc_casino_tbl' ) );
+		$query->set( 'post_status', 'publish' );
+	}
 }
-add_filter( 'frontpage_template', 'themeslug_filter_front_page_template' );
+add_action( 'pre_get_posts', 'vld_gdoc_casino_fp_posts' );
