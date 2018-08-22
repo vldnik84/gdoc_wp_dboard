@@ -9,10 +9,11 @@ Author URI: http://github.com/vldnik84
 */
 
 /**
- * Creates vld_gdoc_casino_cpt custom post type
+ * Creates custom post types
  */
 function vld_gdoc_casino_add_cpt() {
 
+	// registers casinos custom post type
 	$labels = array(
 		'name'               => __( 'Casinos', 'post type general name' ),
 		'singular_name'      => __( 'Casino', 'post type singular name' ),
@@ -32,7 +33,6 @@ function vld_gdoc_casino_add_cpt() {
 		'title',
 		'editor',
 		'thumbnail',
-		'excerpt',
 		'comments'
 	);
 	$args = array(
@@ -44,6 +44,17 @@ function vld_gdoc_casino_add_cpt() {
 		'has_archive'   => true
 	);
 	register_post_type( 'vld_gdoc_casino_cpt', $args );
+
+	// registers custom post type with a list of casinos
+	$args = array(
+		'labels'        => array('name' => 'List of casinos'),
+		'description'   => 'A table with a list of casinos',
+		'public'        => true,
+		'menu_position' => 5,
+		'supports'      => array('title', 'editor', 'comments'),
+		'has_archive'   => true
+	);
+	register_post_type( 'vld_gdoc_casino_tbl', $args );
 }
 add_action( 'init', 'vld_gdoc_casino_add_cpt' );
 
@@ -161,8 +172,7 @@ function vld_gdoc_casino_add_posts($sort_res) {
 				'meta_input'   => array(
 					'casino_link'    => $sort_res[$i]['casino_link'],
 					'casino_image'   => $sort_res[$i]['casino_image'],
-					'sort_order'     => (int) $sort_res[$i]['sort_order']),
-					'is_casino_list' => false
+					'sort_order'     => (int) $sort_res[$i]['sort_order'])
 			);
 			$post_id = wp_insert_post($post_args);
 
@@ -252,11 +262,10 @@ function vld_gdoc_casino_add_table() {
 
 	$post_args = array(
 		'ID'           => post_exists($post_title),
-		'post_type'    => 'vld_gdoc_casino_cpt',
+		'post_type'    => 'vld_gdoc_casino_tbl',
 		'post_title'   => $post_title,
 		'post_status'  => 'publish',
-		'post_content' => $out,
-		'meta_input'   => array( 'is_casino_list' => true )
+		'post_content' => $out
 	);
 	wp_insert_post( $post_args );
 }
@@ -379,21 +388,8 @@ function vld_gdoc_casino_fp_posts( $query ) {
 
 	if( $query->is_main_query() && $query->is_home() ) {
 
-		// gets already existing post types and meta queries
-		$post_types = $query->get('post_type');
-		$meta_query = $query->get('meta_query') ?: [];
-
-		// appends new post types and meta queries
-		array_push( $post_types, 'vld_gdoc_casino_cpt' );
-		$meta_query[] = [
-			'key' => 'is_casino_list',
-			'value' => true,
-			'compare' => '='
-		];
-
-		$query->set( 'post_type', $post_types );
+		$query->set( 'post_type', array( 'post', 'vld_gdoc_casino_tbl' ) );
 		$query->set( 'post_status', 'publish' );
-		$query->set( 'meta_query', $meta_query );
 	}
 }
 add_action( 'pre_get_posts', 'vld_gdoc_casino_fp_posts', 10, 1 );
